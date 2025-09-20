@@ -18,6 +18,9 @@
 
   env.RUST_BACKTRACE = "1";
 
+  # Fix SSH config issues in devenv shell by bypassing system configs
+  env.GIT_SSH_COMMAND = "ssh -F /dev/null -o UserKnownHostsFile=~/.ssh/known_hosts -o IdentitiesOnly=yes";
+
   languages = {
     python.enable = true;
     rust.enable = true;
