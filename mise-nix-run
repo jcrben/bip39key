@@ -1,0 +1,73 @@
+#!/bin/bash
+
+# mise-nix-run: Run any nix tool installed via mise-nix with proper nix-portable integration
+# Usage: ./mise-nix-run <tool> [args...]
+
+set -e
+
+if [ $# -lt 1 ]; then
+    echo "Usage: $0 <tool> [args...]"
+    echo "Example: $0 hello"
+    echo "Example: $0 cowsay 'Hello world'"
+    echo "Example: $0 ripgrep rg --version"
+    echo ""
+    echo "This script runs nix tools installed via mise-nix using nix-portable."
+    echo "It will automatically install the tool if not present."
+    exit 1
+fi
+
+tool="$1"
+shift
+
+# Export NP_RUNTIME for nix-portable
+export NP_RUNTIME=bwrap
+
+# Function to run a tool with mise-nix + nix-portable
+run_tool() {
+    local tool="$1"
+    shift
+    
+    # Make sure the tool is installed (suppress warnings)
+    mise install "nix:$tool" >/dev/null 2>&1 || true
+    
+    # Get the nix store path
+    local install_dir="/home/ben/dotfiles/local/xdgdata/mise/installs/nix-$tool"
+    local version_dir=$(ls -1 "$install_dir" | grep -v '^\.' | head -1 2>/dev/null)
+    
+    if [ -z "$version_dir" ]; then
+        echo "Installing $tool..."
+        mise install "nix:$tool"
+        version_dir=$(ls -1 "$install_dir" | grep -v '^\.' | head -1 2>/dev/null)
+        if [ -z "$version_dir" ]; then
+            echo "Error: Failed to install $tool"
+            exit 1
+        fi
+    fi
+    
+    # Get the raw symlink target (nix store path)
+    local store_path=$(readlink "$install_dir/$version_dir" 2>/dev/null)
+    
+    if [ -z "$store_path" ]; then
+        echo "Error: Could not read symlink for $tool"
+        exit 1
+    fi
+    
+    # Run with nix-portable
+    if [ $# -eq 0 ]; then
+        # No args provided, try to run the tool directly
+        nix-portable nix shell "$store_path" --command "$tool"
+    else
+        # Check if the first argument looks like a binary name (no special chars)
+        first_arg="$1"
+        if [[ "$first_arg" =~ ^[a-zA-Z0-9_-]+$ ]] && [ ${#first_arg} -le 20 ]; then
+            # Likely a binary name, use it as the command
+            nix-portable nix shell "$store_path" --command "$@"
+        else
+            # Likely arguments for the tool itself
+            nix-portable nix shell "$store_path" --command "$tool" "$@"
+        fi
+    fi
+}
+
+# Run the tool
+run_tool "$tool" "$@"

@@ -1,3 +1,6 @@
+# Build a static binary
+
+
 # Generate an OpenPGP/OpenSSH key from a BIP39 mnemonic
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
