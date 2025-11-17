@@ -1,5 +1,9 @@
 # Build a static binary
 
+## TL;DR
+* `devenv shell`
+* `cargo build`
+* `./target/debug/bip39key`
 
 # Generate an OpenPGP/OpenSSH key from a BIP39 mnemonic
 
